@@ -1,6 +1,5 @@
 # EcoVisionPro- Renewable Energy Monitoring System Backend
 
-![JyotiYantra Logo](https://via.placeholder.com/150x50/00d2ff/ffffff?text=JyotiYantra)
 
 A professional Flask-based backend system for monitoring renewable energy installations with ThingsBoard integration.
 
