@@ -1,4 +1,4 @@
-# JyotiYantra - Renewable Energy Monitoring System Backend
+# EcoVisionPro- Renewable Energy Monitoring System Backend
 
 ![JyotiYantra Logo](https://via.placeholder.com/150x50/00d2ff/ffffff?text=JyotiYantra)
 
@@ -243,4 +243,4 @@ For issues and questions:
 
 ---
 
-**JyotiYantra** - Illuminating renewable energy monitoring 🌞⚡
+**EcoVisionPro** - Illuminating renewable energy monitoring 🌞⚡
