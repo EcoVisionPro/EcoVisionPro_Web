@@ -1,221 +1,482 @@
-// Configuration for the dashboard
+// ================================================================
+// EcoVision Pro - Fixed Real-Time Solar Monitoring Dashboard
+// Direct ThingsBoard WebSocket Connection (No Backend Auth Needed)
+// ================================================================
+
+// Configuration
 const dashboardConfig = {
-    // ---- IMPORTANT: Replace with your backend's URL and API Key ----
-    backendApiUrl: 'http://192.168.39.224:5000', // The URL of your Python Flask server
-    apiKey: 'Str0ngS3cr3tKey_For_My_API_123!',     // The API key from your .env file
+    // Your ThingsBoard device credentials
+    deviceToken: "YycWv6Ad7iznPEk9HdT3",
+    deviceId: "5c019fc0-a2c6-11f0-91df-7ffa16af2ee9",
 
-    // ---- IMPORTANT: Replace with your ThingsBoard WebSocket host ----
-    thingsboardWsHost: 'ws://192.168.39.224:8080/api/ws/plugins/telemetry', // Use 'ws://' not 'http://'. Change if your ThingsBoard is elsewhere.
+    // Backend API (optional - for historical data)
+    backendApiUrl: 'http://127.0.0.1:5000',
+    apiKey: 'Str0ngS3cr3tKey_For_My_API_123!',
 
+    // ThingsBoard WebSocket URL
+    thingsboardWsHost: 'wss://thingsboard.cloud/api/ws/plugins/telemetry',
+
+    // Display settings
     dataPointsToShow: 20,
+    updateInterval: 5000, // Update every 5 seconds
+
+    // Chart colors
     chartColors: {
-        voltage: ['rgba(0, 210, 255, 0.9)', 'rgba(58, 123, 213, 0.75)', 'rgba(251, 194, 235, 0.73)'],
-        current: ['rgba(253, 194, 194, 1)', 'rgba(247, 151, 30, 0.8)', 'rgba(255, 210, 0, 0.8)'],
-        power: ['rgba(255, 210, 0, 0.8)', 'rgba(43, 195, 168, 0.75)', 'rgba(121, 196, 241, 0.63)']
+        voltage: ['rgba(0, 210, 255, 0.9)', 'rgba(58, 123, 213, 0.75)'],
+        current: ['rgba(253, 194, 194, 1)', 'rgba(247, 151, 30, 0.8)'],
+        power: ['rgba(255, 210, 0, 0.8)', 'rgba(43, 195, 168, 0.75)'],
+        temperature: ['rgba(255, 99, 132, 0.8)', 'rgba(255, 159, 64, 0.8)'],
+        battery: ['rgba(75, 192, 192, 1)', 'rgba(153, 102, 255, 0.8)']
     }
 };
 
-// Global variables for charts and data
-let voltageChart, currentChart, powerChart, batteryGauge;
-const sensorData = { labels: [], voltage: [], current: [], power: [] };
+// Global variables for charts and data storage
+let voltageChart, currentChart, powerChart, temperatureChart, batteryGauge;
+let websocket = null;
+let reconnectAttempts = 0;
+const maxReconnectAttempts = 10;
 
-//
-// --- Step 1: Fetch the secure token from our backend ---
-//
-async function getThingsboardToken() {
+const sensorData = {
+    timestamps: [],
+    voltage: [],
+    current: [],
+    power: [],
+    temperature: [],
+    battery: [],
+    irradiance: []
+};
+
+// ================================================================
+// WEBSOCKET CONNECTION TO THINGSBOARD
+// ================================================================
+
+function connectToThingsBoard() {
     try {
-        const response = await fetch(`${dashboardConfig.backendApiUrl}/api/ws-token`, {
-            headers: { 'X-API-Key': dashboardConfig.apiKey }
-        });
-        if (!response.ok) {
-            throw new Error('Failed to get WebSocket token from backend.');
-        }
-        const data = await response.json();
-        return data.token;
-    } catch (error) {
-        console.error("Authentication Error:", error);
-        showAlert("Error: Could not authenticate with the backend.");
-        return null;
-    }
-}
+        console.log("🔌 Connecting to ThingsBoard WebSocket...");
 
-//
-// --- Step 2: Connect to ThingsBoard using MQTT over WebSockets ---
-//
-async function connectToMqtt() {
-    const token = await getThingsboardToken();
-    if (!token) return;
+        // Build WebSocket URL with device token
+        const wsUrl = `${dashboardConfig.thingsboardWsHost}?token=${dashboardConfig.deviceToken}`;
 
-    const wsUrl = `${dashboardConfig.thingsboardWsHost}/api/ws/plugins/telemetry?token=${token}`;
-    const client = mqtt.connect(wsUrl);
+        websocket = new WebSocket(wsUrl);
 
-    client.on('connect', () => {
-        console.log('Successfully connected to ThingsBoard via WebSocket!');
-        showAlert("Live connection established!", "success");
+        websocket.onopen = () => {
+            console.log("✅ Successfully connected to ThingsBoard!");
+            reconnectAttempts = 0;
 
-        // ThingsBoard WebSocket subscription is done by sending a JSON command
-        const subscriptionCommand = {
-            tsSubCmds: [
-                {
-                    entityType: "DEVICE",
-                    entityId: "1bf49380-9d60-11f0-9924-03351eea895f", // IMPORTANT: Get this from your .env file or ThingsBoard UI
-                    scope: "LATEST_TELEMETRY",
-                    cmdId: 1
-                }
-            ]
+            // Update connection status on UI
+            updateConnectionStatus(true, "Connected to ThingsBoard");
+
+            // Subscribe to device telemetry
+            subscribeToTelemetry();
         };
-        // The topic for sending commands is 'v1/devices/me/telemetry' but here we just stringify the command
-        client.publish('v1/devices/me/telemetry', JSON.stringify(subscriptionCommand));
-    });
 
-    //
-    // --- Step 3: Handle incoming messages ---
-    //
-    client.on('message', (topic, message) => {
-        const data = JSON.parse(message.toString());
-        // Check if it's a telemetry update
-        if (data && data.data) {
-            console.log('Received telemetry:', data.data);
-            const latestData = processIncomingData(data.data);
-            updateDashboard(latestData);
-        }
-    });
+        websocket.onmessage = (event) => {
+            try {
+                const message = JSON.parse(event.data);
+                console.log("📊 Received data from ThingsBoard:", message);
 
-    client.on('error', (err) => {
-        console.error('Connection error:', err);
-        showAlert("Connection error. Please check the console.");
-        client.end();
-    });
-}
+                // Handle subscription response
+                if (message.subscriptionId) {
+                    console.log("✅ Subscription confirmed, waiting for telemetry data...");
+                }
 
-// This function converts the ThingsBoard data format to what our dashboard expects
-function processIncomingData(tbData) {
-    const processed = {};
-    for (const key in tbData) {
-        // The value is in an array, e.g., [timestamp, "value"]
-        processed[key] = tbData[key][0][1];
+                // Handle telemetry data
+                if (message.data) {
+                    processThingsBoardData(message.data);
+                }
+            } catch (error) {
+                console.error("❌ Error processing message:", error);
+            }
+        };
+
+        websocket.onerror = (error) => {
+            console.error("❌ WebSocket Error:", error);
+            updateConnectionStatus(false, "Connection error");
+        };
+
+        websocket.onclose = () => {
+            console.log("🔌 WebSocket connection closed");
+            updateConnectionStatus(false, "Disconnected");
+
+            // Attempt to reconnect
+            if (reconnectAttempts < maxReconnectAttempts) {
+                reconnectAttempts++;
+                const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+                console.log(`🔄 Reconnecting in ${delay/1000} seconds... (Attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
+                setTimeout(connectToThingsBoard, delay);
+            } else {
+                console.error("❌ Max reconnection attempts reached");
+                showError("Failed to connect to ThingsBoard. Please refresh the page.");
+            }
+        };
+
+    } catch (error) {
+        console.error("❌ Connection Error:", error);
+        updateConnectionStatus(false, "Failed to connect");
     }
-    return processed;
 }
 
+function subscribeToTelemetry() {
+    if (websocket && websocket.readyState === WebSocket.OPEN) {
+        const subscriptionCommand = {
+            tsSubCmds: [{
+                entityType: "DEVICE",
+                entityId: dashboardConfig.deviceId,
+                scope: "LATEST_TELEMETRY",
+                cmdId: 1
+            }],
+            historyCmds: [],
+            attrSubCmds: []
+        };
 
-//
-// --- Dashboard Update Functions (Mostly the same as before) ---
-//
-
-function updateDashboard(data) {
-    if (!data.voltage) return; // Don't update if data is incomplete
-    updateMetricCards(data);
-    updateCharts(data);
-    updateBatteryStatus(data); // Assuming battery data comes from battery_voltage
-    manageAlerts(data);
+        websocket.send(JSON.stringify(subscriptionCommand));
+        console.log("📡 Subscribed to device telemetry");
+    }
 }
 
-function updateMetricCards(data) {
-    document.getElementById('current-voltage').textContent = `${data.voltage} V`;
-    document.getElementById('current-current').textContent = `${data.current} A`;
-    document.getElementById('current-power').textContent = `${data.power_output} W`;
-    document.getElementById('current-temperature').textContent = `${data.temperature}°C`;
-    document.getElementById('current-irradiance').textContent = `${data.irradiance} W/m²`;
-    document.getElementById('env-temperature').textContent = `${data.temperature}°C`;
+// ================================================================
+// DATA PROCESSING
+// ================================================================
+
+function processThingsBoardData(data) {
+    try {
+        console.log("Processing telemetry data:", data);
+
+        // Extract latest values from ThingsBoard format
+        const latestData = {};
+
+        // ThingsBoard sends data in format: { "key": [{"ts": timestamp, "value": value}] }
+        for (const key in data) {
+            if (data[key] && data[key].length > 0) {
+                const latest = data[key][0];
+                latestData[key] = parseFloat(latest.value);
+                latestData.timestamp = new Date(latest.ts);
+            }
+        }
+
+        // Map ThingsBoard keys to our dashboard keys
+        const mappedData = {
+            voltage: latestData.panel_voltage || latestData.voltage || 0,
+            current: latestData.current || 0,
+            temperature: latestData.temperature || 0,
+            battery: latestData.battery_voltage || 0,
+            irradiance: latestData.brightness || latestData.irradiance || 0,
+            power: (latestData.panel_voltage || 0) * (latestData.current || 0), // Calculate power
+            timestamp: latestData.timestamp || new Date()
+        };
+
+        console.log("✅ Mapped data:", mappedData);
+
+        // Update dashboard with new data
+        updateDashboardWithData(mappedData);
+
+    } catch (error) {
+        console.error("❌ Error processing data:", error);
+    }
 }
 
-function updateCharts(data) {
-    const now = new Date();
-    const timeLabel = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
-    
-    sensorData.labels.push(timeLabel);
-    sensorData.voltage.push(parseFloat(data.voltage));
-    sensorData.current.push(parseFloat(data.current));
-    sensorData.power.push(parseFloat(data.power_output));
+function updateDashboardWithData(data) {
+    // Add to historical data
+    const timestamp = data.timestamp.toLocaleTimeString();
 
-    if (sensorData.labels.length > dashboardConfig.dataPointsToShow) {
-        sensorData.labels.shift();
+    sensorData.timestamps.push(timestamp);
+    sensorData.voltage.push(data.voltage);
+    sensorData.current.push(data.current);
+    sensorData.power.push(data.power);
+    sensorData.temperature.push(data.temperature);
+    sensorData.battery.push(data.battery);
+    sensorData.irradiance.push(data.irradiance);
+
+    // Keep only last N data points
+    const maxPoints = dashboardConfig.dataPointsToShow;
+    if (sensorData.timestamps.length > maxPoints) {
+        sensorData.timestamps.shift();
         sensorData.voltage.shift();
         sensorData.current.shift();
         sensorData.power.shift();
+        sensorData.temperature.shift();
+        sensorData.battery.shift();
+        sensorData.irradiance.shift();
     }
 
-    voltageChart.data.labels = [...sensorData.labels];
-    voltageChart.data.datasets[0].data = [...sensorData.voltage];
-    voltageChart.update('none');
-
-    currentChart.data.labels = [...sensorData.labels];
-    currentChart.data.datasets[0].data = [...sensorData.current];
-    currentChart.update('none');
-
-    powerChart.data.labels = [...sensorData.labels];
-    powerChart.data.datasets[0].data = [...sensorData.power];
-    powerChart.update('none');
+    // Update UI elements
+    updateMetricCards(data);
+    updateCharts();
+    updateBatteryGauge(data.battery);
 }
 
-function updateBatteryStatus(data) {
-    const batteryVoltage = parseFloat(data.battery_voltage);
-    // Simple mapping: 12.0V = 0%, 12.6V = 100%
-    const percentage = Math.round(Math.max(0, Math.min(100, (batteryVoltage - 12.0) / 0.6 * 100)));
+function updateMetricCards(data) {
+    // Update voltage
+    const voltageEl = document.getElementById('voltage-value');
+    if (voltageEl) voltageEl.textContent = data.voltage.toFixed(2) + ' V';
 
-    batteryGauge.data.datasets[0].data[0] = percentage;
-    batteryGauge.data.datasets[0].data[1] = 100 - percentage;
-    batteryGauge.update('none');
+    // Update current
+    const currentEl = document.getElementById('current-value');
+    if (currentEl) currentEl.textContent = data.current.toFixed(2) + ' A';
 
-    document.getElementById('battery-percentage').textContent = `${percentage}%`;
-    document.getElementById('battery-voltage-display').textContent = `${batteryVoltage} V`;
-    document.getElementById('battery-progress').style.width = `${percentage}%`;
+    // Update power
+    const powerEl = document.getElementById('power-value');
+    if (powerEl) powerEl.textContent = data.power.toFixed(2) + ' W';
+
+    // Update temperature
+    const tempEl = document.getElementById('temperature-value');
+    if (tempEl) tempEl.textContent = data.temperature.toFixed(1) + ' °C';
+
+    // Update battery
+    const batteryEl = document.getElementById('battery-value');
+    if (batteryEl) batteryEl.textContent = data.battery.toFixed(2) + ' V';
+
+    // Update irradiance/brightness
+    const irradianceEl = document.getElementById('irradiance-value');
+    if (irradianceEl) irradianceEl.textContent = data.irradiance.toFixed(0) + ' %';
+
+    // Update last update time
+    const lastUpdateEl = document.getElementById('last-update');
+    if (lastUpdateEl) lastUpdateEl.textContent = `Last update: ${new Date().toLocaleTimeString()}`;
 }
 
+// ================================================================
+// CHART INITIALIZATION AND UPDATES
+// ================================================================
 
-function showAlert(message, type = 'danger') {
-    const alertContainer = document.getElementById('alert-container');
-    const alertClass = type === 'success' ? 'alert-success' : 'alert-custom';
-    alertContainer.innerHTML = `<div class='alert ${alertClass} animate__animated animate__fadeIn'>${message}</div>`;
-}
+function initCharts() {
+    console.log("📊 Initializing charts...");
 
-function manageAlerts(data) {
-    const alertContainer = document.getElementById('alert-container');
-    const voltage = parseFloat(data.voltage);
-    const batteryVoltage = parseFloat(data.battery_voltage);
-    
-    // Clear old alerts if they are not critical anymore
-    alertContainer.innerHTML = '';
-    
-    if (voltage < 12.0) {
-        showAlert(`Low System Voltage: ${voltage}V`);
-    }
-    if (batteryVoltage < 12.1) {
-        showAlert(`Low Battery Voltage: ${batteryVoltage}V`);
-    }
-}
+    // Common chart options
+    const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                mode: 'index',
+                intersect: false,
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                titleColor: '#fff',
+                bodyColor: '#fff',
+                borderColor: '#4ECDC4',
+                borderWidth: 1
+            }
+        },
+        scales: {
+            x: {
+                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                ticks: { color: '#fff', maxTicksLimit: 8 }
+            },
+            y: {
+                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                ticks: { color: '#fff' }
+            }
+        }
+    };
 
-// Initialize all the charts (same as before)
-function initializeCharts() {
-    // ... (This function remains exactly the same as in your original file)
     // Voltage Chart
-    voltageChart = new Chart(document.getElementById('voltageChart').getContext('2d'), {
-        type: 'line', data: { labels: [], datasets: [{ label: 'Voltage', data: [], borderColor: dashboardConfig.chartColors.voltage[0], backgroundColor: dashboardConfig.chartColors.voltage[2], pointBackgroundColor: dashboardConfig.chartColors.voltage[1], pointBorderColor: '#fff', borderWidth: 3, pointRadius: 4, fill: true, }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: {legend: {display: false}}, scales: { x: { grid: {color:'#ffd2007c'}, ticks: {color:'#007bff',font:{size:12}}, }, y: { min:11,max:15,grid:{color:'#00d2ff7c'},ticks:{color:'#00d2ff',font:{size:12},callback:v=>`${v}V`} }, } }
-    });
+    const voltageCtx = document.getElementById('voltageChart');
+    if (voltageCtx) {
+        voltageChart = new Chart(voltageCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Voltage (V)',
+                    data: [],
+                    borderColor: dashboardConfig.chartColors.voltage[0],
+                    backgroundColor: dashboardConfig.chartColors.voltage[1],
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: commonOptions
+        });
+    }
+
     // Current Chart
-    currentChart = new Chart(document.getElementById('currentChart').getContext('2d'), {
-        type: 'line', data: { labels: [], datasets: [{ label: 'Current', data: [], borderColor: dashboardConfig.chartColors.current[0], backgroundColor: dashboardConfig.chartColors.current[2], pointBackgroundColor: dashboardConfig.chartColors.current[1], pointBorderColor: '#fff', borderWidth: 3, pointRadius: 4, fill: true, }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: {legend: {display: false}}, scales: { x: {grid: {color:'#ffd2007c'}, ticks: {color:'#f7971e',font:{size:12}}}, y: {min:0,max:25,grid:{color:'#fdc2c27c'},ticks:{color:'#f7971e',font:{size:12},callback:v=>`${v}A`}} } }
-    });
+    const currentCtx = document.getElementById('currentChart');
+    if (currentCtx) {
+        currentChart = new Chart(currentCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Current (A)',
+                    data: [],
+                    borderColor: dashboardConfig.chartColors.current[0],
+                    backgroundColor: dashboardConfig.chartColors.current[1],
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: commonOptions
+        });
+    }
+
     // Power Chart
-    powerChart = new Chart(document.getElementById('powerChart').getContext('2d'), {
-        type: 'line', data: { labels: [], datasets: [{ label: 'Power', data: [], borderColor: dashboardConfig.chartColors.power[0], backgroundColor: dashboardConfig.chartColors.power[2], pointBackgroundColor: dashboardConfig.chartColors.power[1], pointBorderColor: '#fff', borderWidth: 3, pointRadius: 4, fill: true, }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: {legend: {display: false}}, scales: { x: {grid: {color:'#ffd2007c'},ticks:{color:'#00d2ff',font:{size:12}}}, y: {min:0,max:400,grid:{color:'#00d2ff33'},ticks:{color:'#ffd200',font:{size:12},callback:v=>`${v}W`}} } }
-    });
-    // Battery Gauge
-    batteryGauge = new Chart(document.getElementById('batteryGauge').getContext('2d'), {
-        type: 'doughnut', data: { datasets: [{ data: [0, 100], backgroundColor: ['#00d2ff', '#fbc2eb'], borderWidth: 0, cutout: '73%' }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: {legend: {display: !1}, tooltip: {enabled: !1}} }
-    });
+    const powerCtx = document.getElementById('powerChart');
+    if (powerCtx) {
+        powerChart = new Chart(powerCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Power (W)',
+                    data: [],
+                    borderColor: dashboardConfig.chartColors.power[0],
+                    backgroundColor: dashboardConfig.chartColors.power[1],
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: commonOptions
+        });
+    }
+
+    // Battery Gauge (Doughnut Chart)
+    const batteryCtx = document.getElementById('batteryGauge');
+    if (batteryCtx) {
+        batteryGauge = new Chart(batteryCtx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [0, 100],
+                    backgroundColor: [
+                        dashboardConfig.chartColors.battery[0],
+                        'rgba(200, 200, 200, 0.2)'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '75%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                }
+            }
+        });
+    }
+
+    console.log("✅ Charts initialized successfully");
 }
 
+function updateCharts() {
+    // Update Voltage Chart
+    if (voltageChart) {
+        voltageChart.data.labels = sensorData.timestamps;
+        voltageChart.data.datasets[0].data = sensorData.voltage;
+        voltageChart.update('none');
+    }
 
-//
-// --- Main entry point when the page loads ---
-//
+    // Update Current Chart
+    if (currentChart) {
+        currentChart.data.labels = sensorData.timestamps;
+        currentChart.data.datasets[0].data = sensorData.current;
+        currentChart.update('none');
+    }
+
+    // Update Power Chart
+    if (powerChart) {
+        powerChart.data.labels = sensorData.timestamps;
+        powerChart.data.datasets[0].data = sensorData.power;
+        powerChart.update('none');
+    }
+}
+
+function updateBatteryGauge(voltage) {
+    if (batteryGauge) {
+        // Convert voltage to percentage (assuming 12V battery: 11V=0%, 14.4V=100%)
+        const minVoltage = 11.0;
+        const maxVoltage = 14.4;
+        const percentage = Math.min(100, Math.max(0, 
+            ((voltage - minVoltage) / (maxVoltage - minVoltage)) * 100
+        ));
+
+        batteryGauge.data.datasets[0].data = [percentage, 100 - percentage];
+        batteryGauge.update('none');
+
+        // Update percentage text
+        const batteryPercentEl = document.getElementById('battery-percent');
+        if (batteryPercentEl) batteryPercentEl.textContent = percentage.toFixed(0) + '%';
+    }
+}
+
+// ================================================================
+// UI HELPER FUNCTIONS
+// ================================================================
+
+function updateConnectionStatus(connected, message) {
+    const statusIndicator = document.getElementById('connection-status');
+    const statusMessage = document.getElementById('connection-message');
+
+    if (statusIndicator) {
+        statusIndicator.className = connected ? 'status-online' : 'status-offline';
+    }
+
+    if (statusMessage) {
+        statusMessage.textContent = message;
+    }
+
+    // Update error message if disconnected
+    if (!connected) {
+        showError(message);
+    } else {
+        hideError();
+    }
+}
+
+function showError(message) {
+    const errorContainer = document.getElementById('error-message');
+    if (errorContainer) {
+        errorContainer.textContent = message;
+        errorContainer.style.display = 'block';
+    }
+}
+
+function hideError() {
+    const errorContainer = document.getElementById('error-message');
+    if (errorContainer) {
+        errorContainer.style.display = 'none';
+    }
+}
+
+// ================================================================
+// INITIALIZATION
+// ================================================================
+
 window.addEventListener('DOMContentLoaded', () => {
-    initializeCharts();
-    connectToMqtt();
+    console.log("🚀 EcoVision Pro Dashboard Starting...");
+    console.log("📍 Device ID:", dashboardConfig.deviceId);
+    console.log("🔑 Token:", dashboardConfig.deviceToken.substring(0, 10) + "...");
+
+    // Initialize charts
+    initCharts();
+
+    // Connect to ThingsBoard
+    connectToThingsBoard();
+
+    console.log("✅ Dashboard initialized successfully!");
 });
+
+// Handle page visibility changes (pause/resume connection)
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        console.log("📴 Page hidden, maintaining connection...");
+    } else {
+        console.log("👁️ Page visible, checking connection...");
+        if (!websocket || websocket.readyState !== WebSocket.OPEN) {
+            connectToThingsBoard();
+        }
+    }
+});
+
+// Export for debugging (development only)
+if (typeof window !== 'undefined') {
+    window.ecoVisionDebug = {
+        sensorData,
+        config: dashboardConfig,
+        reconnect: connectToThingsBoard,
+        websocket: () => websocket
+    };
+    console.log("🔧 Debug tools available: window.ecoVisionDebug");
+}
