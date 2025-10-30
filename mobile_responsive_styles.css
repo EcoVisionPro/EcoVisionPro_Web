@@ -1,0 +1,498 @@
+
+/* ================================================================
+   MOBILE RESPONSIVE DESIGN & MODE TOGGLE STYLES
+   ================================================================ */
+
+/* Mode Toggle Switch */
+.mode-toggle-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 15px 20px;
+    border-radius: 50px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.mode-toggle-container:hover {
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px);
+}
+
+.mode-label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #305680;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mode-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+.mode-indicator.demo {
+    background: #FFE66D;
+    box-shadow: 0 0 10px #FFE66D;
+}
+
+.mode-indicator.live {
+    background: #4ECDC4;
+    box-shadow: 0 0 10px #4ECDC4;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 60px;
+    height: 30px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, #FFE66D, #f76b1c);
+    border-radius: 30px;
+    transition: all 0.4s ease;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    border-radius: 50%;
+    transition: all 0.4s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+input:checked + .toggle-slider {
+    background: linear-gradient(135deg, #4ECDC4, #00d2ff);
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(30px);
+}
+
+/* Trend Badges */
+.trend-badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-block;
+    margin-top: 5px;
+}
+
+.trend-positive {
+    background: rgba(78, 205, 196, 0.2);
+    color: #4ECDC4;
+}
+
+.trend-negative {
+    background: rgba(255, 107, 107, 0.2);
+    color: #FF6B6B;
+}
+
+/* Notifications */
+.notification {
+    position: fixed;
+    top: 100px;
+    right: -400px;
+    max-width: 350px;
+    background: white;
+    border-radius: 12px;
+    padding: 15px 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    z-index: 9999;
+    transition: right 0.3s ease;
+}
+
+.notification.show {
+    right: 20px;
+}
+
+.notification-success {
+    border-left: 4px solid #4ECDC4;
+}
+
+.notification-info {
+    border-left: 4px solid #305680;
+}
+
+.notification-warning {
+    border-left: 4px solid #FFE66D;
+}
+
+.notification-content strong {
+    display: block;
+    margin-bottom: 5px;
+    color: #305680;
+}
+
+.notification-content p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+/* ================================================================
+   MOBILE RESPONSIVE STYLES (Max-width: 768px)
+   ================================================================ */
+
+@media (max-width: 768px) {
+    /* Mode Toggle - Move to top left on mobile */
+    .mode-toggle-container {
+        top: 10px;
+        right: 10px;
+        padding: 10px 15px;
+        font-size: 0.8rem;
+    }
+
+    .toggle-switch {
+        width: 50px;
+        height: 26px;
+    }
+
+    .toggle-slider:before {
+        height: 18px;
+        width: 18px;
+    }
+
+    input:checked + .toggle-slider:before {
+        transform: translateX(24px);
+    }
+
+    /* Hero Section */
+    .hero-header {
+        height: auto;
+        min-height: 400px;
+        padding: 80px 20px 30px;
+    }
+
+    .hero-title {
+        font-size: 2rem;
+        margin-bottom: 10px;
+    }
+
+    .hero-subtitle {
+        font-size: 1rem;
+    }
+
+    .hero-stats {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+        width: 100%;
+    }
+
+    .stat-item {
+        width: 100%;
+        min-width: auto;
+    }
+
+    /* Metric Cards */
+    .metric-card {
+        min-height: 150px;
+        padding: 1.5rem 1rem;
+    }
+
+    .metric-icon {
+        font-size: 2rem;
+    }
+
+    .metric-value {
+        font-size: 1.8rem;
+    }
+
+    .metric-label {
+        font-size: 0.9rem;
+    }
+
+    /* Charts */
+    .chart-card {
+        min-height: 350px;
+        padding: 1.5rem 1rem;
+    }
+
+    .chart-container {
+        height: 250px;
+    }
+
+    .chart-container canvas {
+        max-height: 250px !important;
+    }
+
+    /* Status Cards */
+    .status-card {
+        min-height: auto;
+        padding: 1.5rem;
+    }
+
+    .gauge-container {
+        width: 140px;
+        height: 140px;
+    }
+
+    .gauge-percentage {
+        font-size: 1.5rem;
+    }
+
+    /* Grid Adjustments */
+    .row > [class*="col-"] {
+        padding-left: 10px;
+        padding-right: 10px;
+        margin-bottom: 20px;
+    }
+
+    /* Spacing */
+    .dashboard-main {
+        padding: 1rem 0;
+    }
+
+    section {
+        margin-bottom: 2rem;
+    }
+
+    /* Notifications */
+    .notification {
+        max-width: calc(100% - 40px);
+        right: -100%;
+    }
+
+    .notification.show {
+        right: 10px;
+    }
+}
+
+/* ================================================================
+   TABLET RESPONSIVE (768px - 1024px)
+   ================================================================ */
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .hero-title {
+        font-size: 2.5rem;
+    }
+
+    .metric-card {
+        min-height: 160px;
+    }
+
+    .chart-container {
+        height: 260px;
+    }
+
+    .stat-item {
+        min-width: 150px;
+    }
+}
+
+/* ================================================================
+   EXTRA SMALL DEVICES (Max-width: 576px)
+   ================================================================ */
+
+@media (max-width: 576px) {
+    /* Mode Toggle - Compact version */
+    .mode-toggle-container {
+        padding: 8px 12px;
+        gap: 10px;
+    }
+
+    .mode-label {
+        font-size: 0.75rem;
+    }
+
+    /* Hero adjustments */
+    .hero-header {
+        min-height: 350px;
+        padding: 70px 15px 20px;
+    }
+
+    .hero-title {
+        font-size: 1.75rem;
+    }
+
+    .hero-subtitle {
+        font-size: 0.9rem;
+    }
+
+    .stat-value {
+        font-size: 1.4rem;
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+    }
+
+    /* Metric Cards - Smaller */
+    .metric-card {
+        min-height: 130px;
+        padding: 1rem 0.8rem;
+    }
+
+    .metric-icon {
+        font-size: 1.8rem;
+    }
+
+    .metric-value {
+        font-size: 1.6rem;
+    }
+
+    .metric-label {
+        font-size: 0.85rem;
+    }
+
+    /* Charts - More compact */
+    .chart-card {
+        min-height: 320px;
+        padding: 1.2rem 0.8rem;
+    }
+
+    .chart-title {
+        font-size: 1.1rem;
+    }
+
+    .chart-container {
+        height: 220px;
+    }
+
+    /* Status Cards */
+    .status-card {
+        padding: 1.2rem;
+    }
+
+    .gauge-container {
+        width: 120px;
+        height: 120px;
+    }
+
+    .detail-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+
+    .detail-content {
+        width: 100%;
+    }
+
+    /* Footer */
+    .footer-links {
+        flex-direction: column;
+        gap: 10px;
+        align-items: center;
+    }
+
+    /* Section headers */
+    .section-title {
+        font-size: 1.5rem;
+    }
+
+    .section-subtitle {
+        font-size: 0.9rem;
+    }
+}
+
+/* ================================================================
+   LANDSCAPE MODE (Height less than width)
+   ================================================================ */
+
+@media (max-height: 600px) and (orientation: landscape) {
+    .hero-header {
+        min-height: 300px;
+    }
+
+    .chart-container {
+        height: 200px;
+    }
+
+    .gauge-container {
+        width: 100px;
+        height: 100px;
+    }
+}
+
+/* ================================================================
+   HIGH DPI DISPLAYS (Retina)
+   ================================================================ */
+
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .metric-card,
+    .chart-card,
+    .status-card {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+}
+
+/* ================================================================
+   DARK MODE SUPPORT (Optional)
+   ================================================================ */
+
+@media (prefers-color-scheme: dark) {
+    .mode-toggle-container {
+        background: rgba(48, 54, 61, 0.95);
+    }
+
+    .mode-label {
+        color: #ffffff;
+    }
+
+    .notification {
+        background: #2d3748;
+        color: #ffffff;
+    }
+
+    .notification-content strong {
+        color: #ffffff;
+    }
+
+    .notification-content p {
+        color: #cbd5e0;
+    }
+}
+
+/* ================================================================
+   PRINT STYLES
+   ================================================================ */
+
+@media print {
+    .mode-toggle-container,
+    .notification,
+    .floating-elements {
+        display: none !important;
+    }
+
+    .hero-header {
+        height: auto;
+        page-break-after: avoid;
+    }
+
+    .metric-card,
+    .chart-card,
+    .status-card {
+        page-break-inside: avoid;
+    }
+}
