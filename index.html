@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoVision Pro - Real-Time Solar Energy Monitoring</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="simple_layout.css">
+    <link rel="stylesheet" href="enhanced_effects.css">
+    
+    <style>
+        /* CURSOR ANIMATION STYLES */
+        #cursorCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9999;
+            pointer-events: none;
+            background: transparent;
+        }
+        
+        body { cursor: default; }
+        
+        .cursor-dot {
+            display: none;
+            position: fixed;
+            width: 12px;
+            height: 12px;
+            background: radial-gradient(circle, rgba(78, 205, 196, 0.8) 0%, rgba(78, 205, 196, 0.3) 50%, transparent 100%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10000;
+            transform: translate(-50%, -50%);
+            transition: all 0.1s ease;
+            filter: blur(2px);
+            box-shadow: 0 0 20px rgba(78, 205, 196, 0.5);
+        }
+        
+        .cursor-ring {
+            position: fixed;
+            width: 30px;
+            height: 30px;
+            border: 2px solid rgba(78, 205, 196, 0.5);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10000;
+            transform: translate(-50%, -50%);
+            transition: all 0.15s ease;
+        }
+    </style>
+</head>
+<body>
+    
+    <canvas id="cursorCanvas"></canvas>
+    
+    <div class="liquid-background">
+        <div class="liquid-orb liquid-orb-1"></div>
+        <div class="liquid-orb liquid-orb-2"></div>
+        <div class="liquid-orb liquid-orb-3"></div>
+    </div>
+    
+    <div class="toggle-buttons-container">
+        <button class="toggle-btn demo-btn" id="demo-toggle" onclick="toggleDemoMode()">
+            <span class="btn-icon"><i class="fas fa-play-circle"></i></span>
+            <span class="btn-text">Demo</span>
+            <span class="status-dot live-active" id="mode-indicator"></span>
+        </button>
+        <a href="login.html" class="toggle-btn login-btn">
+            <span class="btn-icon"><i class="fas fa-user"></i></span>
+            <span class="btn-text">Login</span>
+        </a>
+    </div>
+
+    <header class="hero-header">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 20px;">
+            <a href="index.html" style="display: flex; align-items: center; gap: 15px; text-decoration: none; color: white;">
+                <i class="fas fa-leaf" style="font-size: 50px; color: #4ECDC4;"></i>
+                <h1 class="hero-title">EcoVision Pro</h1>
+            </a>
+        </div>
+        <p class="hero-subtitle">by GitHunters 🍃</p>
+        <p style="color: rgba(255,255,255,0.7); font-size: 16px;">Next-Generation Solar Energy Monitoring Platform</p>
+    </header>
+
+    <main class="dashboard-main">
+        <div class="section-header">
+            <h2 class="section-title"><i class="fas fa-tachometer-alt" style="margin-right: 10px;"></i>Real-Time Performance Metrics</h2>
+            <div class="section-divider"></div>
+        </div>
+        <div class="metric-cards-grid">
+            <div class="metric-card">
+                <div class="metric-icon"><i class="fas fa-bolt"></i></div>
+                <div class="metric-value" id="voltage-value">-- V</div>
+                <div class="metric-label">System Voltage</div>
+                <div class="metric-status">Volts</div>
+                <div class="metric-change" id="voltage-trend">+2.3%</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon"><i class="fas fa-wave-square"></i></div>
+                <div class="metric-value" id="current-value">-- A</div>
+                <div class="metric-label">Current Flow</div>
+                <div class="metric-status">Amperes</div>
+                <div class="metric-change" id="current-trend">+5.7%</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon"><i class="fas fa-plug"></i></div>
+                <div class="metric-value" id="power-value">-- W</div>
+                <div class="metric-label">Power Output</div>
+                <div class="metric-status">Watts</div>
+                <div class="metric-change" id="power-trend">+8.1%</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon"><i class="fas fa-temperature-high"></i></div>
+                <div class="metric-value" id="temperature-value">-- °C</div>
+                <div class="metric-label">System Temp</div>
+                <div class="metric-status">Celsius</div>
+                <div class="metric-change" id="temperature-trend">-1.2%</div>
+            </div>
+        </div>
+
+        <div class="section-header">
+            <h2 class="section-title"><i class="fas fa-chart-line" style="margin-right: 10px;"></i>Performance Analytics</h2>
+            <div class="section-divider"></div>
+        </div>
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3 style="margin-bottom: 10px; color: white;"><i class="fas fa-bolt"></i> Voltage Monitoring</h3>
+                <div class="chart-container"><canvas id="voltageChart"></canvas></div>
+                <div style="font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 10px;">Range: 11-15V</div>
+            </div>
+            <div class="chart-card">
+                <h3 style="margin-bottom: 10px; color: white;"><i class="fas fa-wave-square"></i> Current Analysis</h3>
+                <div class="chart-container"><canvas id="currentChart"></canvas></div>
+                <div style="font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 10px;">Range: 0-25A</div>
+            </div>
+            <div class="chart-card">
+                <h3 style="margin-bottom: 10px; color: white;"><i class="fas fa-plug"></i> Power Generation</h3>
+                <div class="chart-container"><canvas id="powerChart"></canvas></div>
+                <div style="font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 10px;">Max: 400W</div>
+            </div>
+        </div>
+
+        <div class="section-header">
+            <h2 class="section-title"><i class="fas fa-cogs" style="margin-right: 10px;"></i>System Status & Environment</h2>
+            <div class="section-divider"></div>
+        </div>
+        <div class="status-grid">
+            <div class="status-card">
+                <h3 style="margin-bottom: 20px; color: white;"><i class="fas fa-battery-three-quarters"></i> Battery Management</h3>
+                <div style="display: flex; align-items: center; gap: 20px; max-height: 300px;">
+                    <div style="flex: 1; text-align: center;">
+                        <canvas id="batteryGauge" style="max-width: 120px; max-height: 120px; margin: 0 auto;"></canvas>
+                        <div style="font-size: 24px; font-weight: 700; color: #4ECDC4; margin-top: 10px;">
+                            <span id="battery-percent">--</span>%
+                        </div>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="margin-bottom: 15px;">
+                            <div style="font-size: 14px; color: rgba(255,255,255,0.6);">Voltage</div>
+                            <div style="font-size: 18px; font-weight: 600; color: white;" id="battery-value">-- V</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 14px; color: rgba(255,255,255,0.6);">Runtime</div>
+                            <div style="font-size: 18px; font-weight: 600; color: white;">4.2 hrs</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="status-card">
+                <h3 style="margin-bottom: 20px; color: white;"><i class="fas fa-cloud-sun"></i> Environmental Conditions</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <div style="font-size: 14px; color: rgba(255,255,255,0.6); margin-bottom: 5px;"><i class="fas fa-sun"></i> Solar Irradiance</div>
+                        <div style="font-size: 20px; font-weight: 600; color: #4ECDC4;" id="irradiance-value">-- W/m²</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 14px; color: rgba(255,255,255,0.6); margin-bottom: 5px;"><i class="fas fa-thermometer-half"></i> Ambient Temp</div>
+                        <div style="font-size: 20px; font-weight: 600; color: #4ECDC4;" id="ambient-temp">-- °C</div>
+                    </div>
+                </div>
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(78,205,196,0.2); font-size: 13px; color: rgba(255,255,255,0.6);">
+                    <div>👁️ Visibility: 10km</div>
+                    <div>💨 Wind: 12 km/h</div>
+                    <div>💧 Humidity: 45%</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="dashboard-footer">
+        <div>
+            <div style="font-weight: 600; margin-bottom: 10px;"><i class="fas fa-leaf"></i> EcoVision Pro</div>
+            <div style="font-size: 14px; margin-bottom: 15px;">
+                <a href="https://github.com/EcoVisionPro" style="color: #4ECDC4; text-decoration: none; margin-right: 20px;">GitHub</a>
+                <a href="#" style="color: #4ECDC4; text-decoration: none; margin-right: 20px;">Documentation</a>
+                <a href="#" style="color: #4ECDC4; text-decoration: none;">Support</a>
+            </div>
+            <div style="font-size: 12px;">© 2025 GitHunters. All rights reserved.</div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Configure transparent chart backgrounds
+        Chart.defaults.backgroundColor = 'transparent';
+        Chart.defaults.plugins.legend.labels.color = 'rgba(255, 255, 255, 0.8)';
+        
+        // ELECTRIC BLUE FLOWING SPLASH - Like water/energy!
+        (function() {
+            const canvas = document.getElementById('cursorCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            window.addEventListener('resize', () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            });
+            
+            const trails = [];
+            let mouseX = window.innerWidth / 2;
+            let mouseY = window.innerHeight / 2;
+            let lastX = mouseX;
+            let lastY = mouseY;
+            
+            // SPIDER-MAN ELECTRIC BLUE COLORS
+            const colors = [
+                { r: 0, g: 180, b: 255 },    // Electric Blue
+                { r: 50, g: 200, b: 255 },   // Sky Blue  
+                { r: 100, g: 220, b: 255 },  // Light Blue
+                { r: 30, g: 160, b: 255 }    // Deep Blue
+            ];
+            
+            // FLOWING TRAIL SEGMENT - Like liquid energy
+            class TrailSegment {
+                constructor(x, y, vx, vy, colorIndex) {
+                    this.points = [];
+                    const segmentLength = 15;
+                    for (let i = 0; i < segmentLength; i++) {
+                        this.points.push({
+                            x: x - vx * i * 0.5,
+                            y: y - vy * i * 0.5
+                        });
+                    }
+                    this.life = 1;
+                    this.color = colors[colorIndex];
+                    this.width = Math.random() * 3 + 2;
+                }
+                
+                update() {
+                    this.life -= 0.02;
+                }
+                
+                draw() {
+                    if (this.points.length < 2) return;
+                    
+                    ctx.save();
+                    ctx.globalAlpha = this.life;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    
+                    // Draw flowing trail with gradient
+                    const gradient = ctx.createLinearGradient(
+                        this.points[0].x, this.points[0].y,
+                        this.points[this.points.length - 1].x, this.points[this.points.length - 1].y
+                    );
+                    gradient.addColorStop(0, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${this.life})`);
+                    gradient.addColorStop(0.5, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${this.life * 0.7})`);
+                    gradient.addColorStop(1, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, 0)`);
+                    
+                    // Outer glow
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${this.life * 0.8})`;
+                    ctx.strokeStyle = gradient;
+                    ctx.lineWidth = this.width + 4;
+                    ctx.beginPath();
+                    ctx.moveTo(this.points[0].x, this.points[0].y);
+                    for (let i = 1; i < this.points.length; i++) {
+                        ctx.lineTo(this.points[i].x, this.points[i].y);
+                    }
+                    ctx.stroke();
+                    
+                    // Inner bright line
+                    ctx.shadowBlur = 8;
+                    ctx.strokeStyle = `rgba(200, 230, 255, ${this.life * 0.9})`;
+                    ctx.lineWidth = this.width;
+                    ctx.beginPath();
+                    ctx.moveTo(this.points[0].x, this.points[0].y);
+                    for (let i = 1; i < this.points.length; i++) {
+                        ctx.lineTo(this.points[i].x, this.points[i].y);
+                    }
+                    ctx.stroke();
+                    
+                    ctx.restore();
+                }
+            }
+            
+            // Mouse movement - Flowing splash trails
+            document.addEventListener('mousemove', (e) => {
+                const newX = e.clientX;
+                const newY = e.clientY;
+                
+                const dx = newX - lastX;
+                const dy = newY - lastY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > 2) {
+                    const colorIndex = Math.floor(Math.random() * colors.length);
+                    trails.push(new TrailSegment(newX, newY, dx / distance, dy / distance, colorIndex));
+                    
+                    lastX = newX;
+                    lastY = newY;
+                }
+                
+                mouseX = newX;
+                mouseY = newY;
+            });
+            
+            // Click burst - Electric splash explosion
+            document.addEventListener('click', (e) => {
+                const x = e.clientX;
+                const y = e.clientY;
+                
+                // Create splash rays in all directions
+                const rays = 12;
+                for (let i = 0; i < rays; i++) {
+                    const angle = (Math.PI * 2 / rays) * i;
+                    const vx = Math.cos(angle);
+                    const vy = Math.sin(angle);
+                    const colorIndex = Math.floor(Math.random() * colors.length);
+                    trails.push(new TrailSegment(x, y, vx, vy, colorIndex));
+                }
+            });
+            
+            // Animation loop - Flowing splash effect
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Update and draw flowing trails
+                for (let i = trails.length - 1; i >= 0; i--) {
+                    trails[i].update();
+                    trails[i].draw();
+                    
+                    if (trails[i].life <= 0) {
+                        trails.splice(i, 1);
+                    }
+                }
+                
+                requestAnimationFrame(animate);
+            }
+            
+            animate();
+            console.log('⚡ ELECTRIC BLUE FLOWING SPLASH ACTIVE!');
+            console.log('🌊 Move mouse to see flowing energy trails!');
+            console.log('💥 Click for splash explosion!');
+        })();
+    </script>
+    <script src="stunning_script.js"></script>
+</body>
+</html>
