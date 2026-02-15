@@ -413,3 +413,13 @@ body {
         page-break-inside: avoid;
     }
 }
+
+.chart-container {
+    height: 280px;
+}
+
+canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+

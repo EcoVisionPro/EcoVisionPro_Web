@@ -3604,3 +3604,24 @@
 2025-09-30 16:05:37,628 - werkzeug - INFO - 192.168.39.224 - - [30/Sep/2025 16:05:37] "GET /api/ws-token HTTP/1.1" 200 -
 2025-09-30 16:05:37,927 - werkzeug - INFO - 192.168.39.224 - - [30/Sep/2025 16:05:37] "GET /api/ws-token HTTP/1.1" 200 -
 2025-09-30 16:05:38,103 - werkzeug - INFO - 192.168.39.224 - - [30/Sep/2025 16:05:38] "GET /api/ws-token HTTP/1.1" 200 -
+2026-02-13 13:59:26,071 - __main__ - INFO - Starting JyotiYantra Backend Server...
+2026-02-13 13:59:26,072 - __main__ - INFO - ThingsBoard Host: demo.thingsboard.io:80
+2026-02-13 13:59:26,072 - __main__ - INFO - Device ID: c0341b30-a2c6-11f0-a9b5-792e2194a5d4
+2026-02-13 13:59:26,073 - __main__ - INFO - Panel Area: 1.5 m²
+2026-02-13 13:59:26,802 - __main__ - INFO - Successfully authenticated with ThingsBoard
+2026-02-13 14:01:39,584 - __main__ - INFO - Starting JyotiYantra Backend Server...
+2026-02-13 14:01:39,585 - __main__ - INFO - ThingsBoard Host: demo.thingsboard.io:80
+2026-02-13 14:01:39,585 - __main__ - INFO - Device ID: c0341b30-a2c6-11f0-a9b5-792e2194a5d4
+2026-02-13 14:01:39,585 - __main__ - INFO - Panel Area: 1.5 m²
+2026-02-13 14:01:40,231 - __main__ - INFO - Successfully authenticated with ThingsBoard
+2026-02-13 14:01:40,247 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5500
+2026-02-13 14:01:40,247 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2026-02-13 14:02:36,007 - werkzeug - INFO - 127.0.0.1 - - [13/Feb/2026 14:02:36] "[33mGET / HTTP/1.1[0m" 404 -
+2026-02-13 14:02:36,400 - werkzeug - INFO - 127.0.0.1 - - [13/Feb/2026 14:02:36] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2026-02-13 14:03:34,403 - __main__ - WARNING - Unauthorized access attempt from 127.0.0.1
+2026-02-13 14:03:34,404 - werkzeug - INFO - 127.0.0.1 - - [13/Feb/2026 14:03:34] "[31m[1mGET /api/data HTTP/1.1[0m" 401 -
+2026-02-13 14:03:38,247 - __main__ - WARNING - Unauthorized access attempt from 127.0.0.1
+2026-02-13 14:03:38,249 - werkzeug - INFO - 127.0.0.1 - - [13/Feb/2026 14:03:38] "[31m[1mGET /api/data HTTP/1.1[0m" 401 -
+2026-02-13 14:03:39,636 - __main__ - WARNING - Unauthorized access attempt from 127.0.0.1
+2026-02-13 14:03:39,637 - werkzeug - INFO - 127.0.0.1 - - [13/Feb/2026 14:03:39] "[31m[1mGET /api/data HTTP/1.1[0m" 401 -

@@ -366,6 +366,196 @@
             console.log('💥 Click for splash explosion!');
         })();
     </script>
-    <script src="stunning_script.js"></script>
+    <script>
+
+/* ===============================
+   ECO VISION LIVE DASHBOARD ENGINE
+   + Demo Mode + Safe Telemetry
+================================ */
+
+const API_KEY = "mysecret123";
+const MAX_POINTS = 20;
+
+let demoMode = false;
+
+/* ---------- Demo Toggle ---------- */
+
+function toggleDemoMode() {
+
+    demoMode = !demoMode;
+
+    const dot = document.getElementById("mode-indicator");
+
+    if (demoMode) {
+        dot.classList.remove("live-active");
+        dot.classList.add("demo-active");
+    } else {
+        dot.classList.remove("demo-active");
+        dot.classList.add("live-active");
+    }
+}
+
+/* ---------- Chart Setup ---------- */
+
+function createChart(id, label, color) {
+
+    const ctx = document.getElementById(id).getContext("2d");
+
+    return new Chart(ctx, {
+        type: "line",
+        data: { labels: [], datasets: [{
+            label,
+            data: [],
+            borderColor: color,
+            backgroundColor: color + "22",
+            tension: 0.35,
+            fill: true,
+            pointRadius: 0
+        }]},
+        options: {
+            responsive: true,
+            animation: false,
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: "#fff" }}},
+            scales: {
+                x: { ticks: { color: "#ccc" }},
+                y: { ticks: { color: "#ccc" }}
+            }
+        }
+    });
+}
+
+const voltageChart = createChart("voltageChart", "Voltage", "#4ECDC4");
+const currentChart = createChart("currentChart", "Current", "#FF6B6B");
+const powerChart = createChart("powerChart", "Power", "#FFD93D");
+
+function pushData(chart, label, value) {
+
+    chart.data.labels.push(label);
+    chart.data.datasets[0].data.push(value);
+
+    if (chart.data.labels.length > MAX_POINTS) {
+        chart.data.labels.shift();
+        chart.data.datasets[0].data.shift();
+    }
+
+    chart.update();
+}
+
+/* ---------- Demo Data Generator ---------- */
+
+function generateDemo() {
+
+    const voltage = 11.5 + Math.random();
+    const current = -0.25 + Math.random() * 0.1;
+    const battery = 12 + Math.random() * 0.3;
+    const irradiance = 500 + Math.random() * 200;
+    const temp = 24 + Math.random();
+
+    return { voltage, current, battery, irradiance, temp };
+}
+
+/* ---------- Safe Value Helper ---------- */
+
+function latest(arr) {
+
+    if (!arr || arr.length === 0) return 0;
+
+    return parseFloat(arr.at(-1).value) || 0;
+}
+
+/* ---------- System Panel ---------- */
+
+function updateSystemPanels(battery, irradiance, temp) {
+
+    let percent = ((battery - 11) / 2) * 100;
+    percent = Math.max(0, Math.min(100, percent));
+
+    document.getElementById("battery-value").innerText =
+        battery.toFixed(2) + " V";
+
+    document.getElementById("battery-percent").innerText =
+        percent.toFixed(0);
+
+    document.getElementById("irradiance-value").innerText =
+        irradiance.toFixed(0) + " W/m²";
+
+    document.getElementById("ambient-temp").innerText =
+        temp.toFixed(1) + " °C";
+}
+
+/* ---------- Main Dashboard Loop ---------- */
+
+async function updateDashboard() {
+
+    let voltage, current, battery, irradiance, temp;
+
+    try {
+
+        if (demoMode) {
+
+            const demo = generateDemo();
+
+            voltage = demo.voltage;
+            current = demo.current;
+            battery = demo.battery;
+            irradiance = demo.irradiance;
+            temp = demo.temp;
+
+        } else {
+
+            const res = await fetch("/api/data", {
+                headers: { "X-API-Key": API_KEY }
+            });
+
+            const data = await res.json();
+
+            voltage = latest(data.voltage);
+            current = latest(data.current);
+            battery = latest(data.battery_voltage);
+            irradiance = latest(data.irradiance);
+            temp = latest(data.temperature);
+        }
+
+        const power = voltage * current;
+
+        /* cards */
+
+        document.getElementById("voltage-value").innerText =
+            voltage.toFixed(2) + " V";
+
+        document.getElementById("current-value").innerText =
+            current.toFixed(2) + " A";
+
+        document.getElementById("power-value").innerText =
+            power.toFixed(2) + " W";
+
+        document.getElementById("temperature-value").innerText =
+            temp.toFixed(1) + " °C";
+
+        updateSystemPanels(battery, irradiance, temp);
+
+        /* charts */
+
+        const time = new Date().toLocaleTimeString();
+
+        pushData(voltageChart, time, voltage);
+        pushData(currentChart, time, current);
+        pushData(powerChart, time, power);
+
+    } catch (err) {
+
+        console.log("Dashboard update error:", err);
+    }
+}
+
+updateDashboard();
+setInterval(updateDashboard, 2000);
+
+</script>
+
+
+
+<script src="stunning_script.js"></script>
 </body>
 </html>
